@@ -25,7 +25,6 @@ class EGreedy():
         self.N = [0] * bandit.n
         self.rewards = []
         self.running_total = 0 
-        self.step = 0
 
         if self.alpha == None:
             self.alpha = lambda x : 1
@@ -48,7 +47,6 @@ class EGreedy():
         self.rewards = []
         self.running_total = 0
         self.init_q()
-        self.step = 0
 
 
     ''' Update Q(a) for a given Q and reward R
@@ -56,8 +54,8 @@ class EGreedy():
     def update_q(self, q, r):
         self.running_total += r
         self.N[q] += 1
-        self.Q[q] = self.Q[q] + self.alpha(self.step) * (r - self.Q[q]) 
-        self.step += 1
+        self.Q[q] = self.Q[q] + self.alpha(self.N[q]) * (r - self.Q[q]) 
+
 
     ''' Chooses either best Q(a) or random using e-greedy alg
     '''
