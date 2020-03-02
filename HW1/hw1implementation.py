@@ -7,7 +7,7 @@ import csv
 
 # Create bandit with specified distributions
 l1 = lambda : random.normal(5, 10**(1/2))
-l2 = lambda : sum(random.normal([10,4], [15**(1/2), 10**(1/2)])) 
+l2 = lambda : 0.5*sum(random.normal([10,4], [15**(1/2), 10**(1/2)])) 
 bandit = Bandit(2, [l1, l2])
 
 # Section a.) 
