@@ -37,20 +37,29 @@ class HW2Agent(Agent):
     ''' Assuming all steps are taken perfectly, generates a sequence of steps 
         that are the most optimal path 
     '''
-    def generate_best_path(self):
+    def generate_best_path(self, stochastic=False, cutoff=None):
         cur_s = self.statemap['start']
         goal = self.statemap['goal']
         
         pathx = [self.curstate[0]]
         pathy = [self.curstate[1]]
 
-        while(cur_s != goal):
-            self.state_transition(self.choose_action(self.policy[self.curstate]))
+        path_len = 0
+        if cutoff == None:
+            cutoff = inf
+
+        while(cur_s != goal and path_len < cutoff):
+            if stochastic:
+                self.state_transition(self.choose_action(self.policy[self.curstate]))
+            
+            else:
+                self.state_transition(self.policy[self.curstate])
             
             pathx.append(self.curstate[0])
             pathy.append(self.curstate[1])
             
             cur_s = self.states[self.curstate]
+            path_len += 1
 
         return pathx, pathy
 
@@ -106,21 +115,20 @@ class HW2Agent(Agent):
         return next_s, reward
 
 
-    ''' Returns list of actions, P(s',r|s,a), s', and r for use in policy
-        and value iteration
+    ''' Returns Q(s,a) = Sum_{s', r} P(s', r|s, a) * [r + gamma*V(s')]
     '''
-    def check_action_values(self, curstate, curaction):
-        action_vals = []
-        for a in self.actions:
-            if curaction == a:
+    def Q(self, s, a):
+        q_sum = 0
+        for a_prime in self.actions:
+            if self.polymap[a_prime] == a:
                 p_of_sr = 1-self.p
             else:
                 p_of_sr = self.p/3
             
-            s_prime, r = self.state_transition(self.polymap[a], curstate=curstate, change_state=False)
-            action_vals.append((self.polymap[a], p_of_sr, s_prime, r))
+            s_prime, r = self.state_transition(self.polymap[a_prime], curstate=s, change_state=False)
+            q_sum += p_of_sr * (r + self.gamma*self.values[s_prime])
         
-        return action_vals
+        return q_sum
 
 
     ''' Iterates between policy eval and policy improvement until stability 
@@ -145,9 +153,9 @@ class HW2Agent(Agent):
                 for col in range(cols):
                     v = self.values[row, col]
                     
-                    v_prime = 0
-                    for a, p_of_sr, s_prime, r in self.check_action_values((row,col), self.policy[(row,col)]):
-                        v_prime += p_of_sr * (r + self.gamma*self.values[s_prime])
+                    # Because Pi(a|s) = 0 for all actions other than the deterministic policy
+                    # we can skip the summation of Pi(a|s) for all actions 
+                    v_prime = self.Q((row,col), self.policy[(row,col)])
 
                     self.values[row,col] = v_prime
                     delta = max(delta, abs(v-v_prime))
@@ -172,15 +180,13 @@ class HW2Agent(Agent):
         policy_stable = True
         rows, cols = self.states.shape
 
-        action_val = lambda x : x[1] * (x[3] + self.gamma*self.values[x[2]])
-
         for row in range(rows):
             for col in range(cols):
                 b = self.policy[row, col]
 
                 argmax = (-inf, None)
                 for a in self.actions:
-                    val = sum([action_val(c) for c in self.check_action_values((row, col), a)])
+                    val = self.Q((row, col), self.polymap[a])
                     
                     if val > argmax[0]:
                         argmax = (val, a)
@@ -192,4 +198,43 @@ class HW2Agent(Agent):
 
         return policy_stable
         
+
+    ''' Generates policy using value iteration
+    '''
+    def value_iteration(self):
+        delta = inf
+        rows, cols = self.values.shape
         
+        # Iterate through all states evaluating V(x,y) until no change 
+        while(delta > self.theta):
+            self.num_evals += 1
+            delta = 0
+
+            for row in range(rows):
+                for col in range(cols):
+                    s = (row, col)
+                    v = self.values[(row, col)]
+
+                    max_a = -inf
+                    for a in self.actions:
+                        q = self.Q(s, self.polymap[a])
+            
+                        if q > max_a:
+                            max_a = q
+                    
+                    self.values[s] = max_a
+                    delta = max(delta, abs(v-max_a))
+
+        # Then set each Pi to the maximum valued action (as determined by V(x,y))
+        for row in range(rows):
+            for col in range(cols):
+                s = (row, col)
+
+                max_a = (-inf, None)
+                for a in self.actions:
+                    q = self.Q(s, self.polymap[a])
+
+                    if q > max_a[0]:
+                        max_a = (q, a)
+                
+                self.policy[s] = self.polymap[max_a[1]]
