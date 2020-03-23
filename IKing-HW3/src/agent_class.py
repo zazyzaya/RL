@@ -261,11 +261,27 @@ class HW3Agent(HW2Agent):
         walk = []
         for _ in range(episode_len):
             s_prime, r, a = self.step(state)
-            walk.append(((state,a), r))
+            walk.append([(state,a), r])
 
-            s = s_prime
+            state = s_prime
         
+        self.generate_acc_rewards(walk, episode_len)
         return walk
+
+
+    ''' Iterates backward through reward list and updates individual
+        state transition rewards to the accumulated reward from the
+        walk following that state
+    '''
+    def generate_acc_rewards(self, walk, episode_len):
+        accumulated = 0
+        for idx in range(episode_len):
+            i = episode_len - idx - 1
+
+            update = walk[i][self.REWARD]
+            walk[i][self.REWARD] += accumulated
+            accumulated += update
+
         
     def step(self, s, a=None):
         if a == None:
@@ -286,15 +302,27 @@ class HW3Agent(HW2Agent):
 
     def on_policy_mc(self, episode_len, num_episodes):
         for e in range(num_episodes):
+            # Generate random start point, but don't start in walls
             start = np.random.randint((1,2), high=self.states.shape)
             start = (start[0], start[1])
+            while(self.states[start] == self.statemap['wall']):
+                start = np.random.randint((1,2), high=self.states.shape)
+                start = (start[0], start[1])
+
             episode = self.random_walk(episode_len, state=start)
 
             s_list = set()
+            sa_list = set()
             for e in episode:
                 sa = e[self.SA_TUPLE]
                 r = e[self.REWARD]
+
+                # Only care about first occurence
+                if sa in sa_list:
+                    continue
+
                 s_list.add(sa[0])
+                sa_list.add(sa)
 
                 # Add/Append reward to returns dict
                 if sa in self.returns:
@@ -306,6 +334,7 @@ class HW3Agent(HW2Agent):
             for s in s_list:
                 a_vals = [self.Q(s,a) for a in self.actions]
                 
+                # If more than one action is max, pick randomly
                 a_star = np.random.choice(
                     np.where(
                         a_vals == np.max(a_vals)
@@ -313,5 +342,3 @@ class HW3Agent(HW2Agent):
                 )
 
                 self.policy[s] = a_star
-
-           #self.returns.clear()
