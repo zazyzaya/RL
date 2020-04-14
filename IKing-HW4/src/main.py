@@ -28,11 +28,4 @@ def generate_sarsa(g=gamma, a=alpha, e=epsilon):
     np.save(SARSA_FILE, SARSA_avg)
     return SARSA_avg
 
-nine = plt.plot(range(NUM_EPISODES), generate_sarsa(), '-g', label='exp(-x)')
-ninenine = plt.plot(range(NUM_EPISODES), generate_sarsa(e=lambda x : exp(-x/10)), '-r', label='exp(-x/10)')
-eight = plt.plot(range(NUM_EPISODES), generate_sarsa(e=lambda x : exp(-x/0.1)), '-b', label='exp(-x/0.1)')
-eight = plt.plot(range(NUM_EPISODES), generate_sarsa(e=lambda x : exp(-x/100)), '-', label='exp(-x/100)')
-
-plt.legend()
-plt.title('SARSA Different Epsilon values')
-plt.show()
+generate_sarsa()

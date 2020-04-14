@@ -24,13 +24,16 @@ def test(episode_len, num_episodes, epsilon, default_r=-1):
     #plt.show()
 
 
-for episodes in range(6):
-    for elen in range(6):
-        test(10 ** elen, 10 ** episodes, 0.25, default_r=-inf)
-
+'''
+for episodes in range(1,5):
+    for elen in range(1,5):
+        test(10 ** elen, 10 ** episodes, 0.02, default_r=-inf)
+'''
 
 '''
 for episodes in range(10000, 130000, 30000):
     for elen in range(100, 1200, 300):
         test(elen, episodes, 0.02, default_r=-inf)
 '''
+
+test(10000, 100000, 0.02, default_r=-inf)

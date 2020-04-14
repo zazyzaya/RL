@@ -346,7 +346,7 @@ class HW3Agent(HW2Agent):
 
 
 class SARSA_Agent(HW2Agent):
-    def __init__(self, states, statemap, p, gamma, alpha, epsilon, max_steps=100):
+    def __init__(self, states, statemap, p, gamma, alpha, epsilon, max_steps=1000):
         super().__init__(states, statemap, p, gamma, 0)
 
         self.alpha = alpha
