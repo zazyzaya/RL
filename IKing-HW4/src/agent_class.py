@@ -346,7 +346,10 @@ class HW3Agent(HW2Agent):
 
 
 class SARSA_Agent(HW2Agent):
-    def __init__(self, states, statemap, p, gamma, alpha, epsilon, max_steps=1000):
+    def __init__(self, states, statemap, p, gamma, 
+    alpha, epsilon, max_steps=500, save_policy=False, fname='SARSA_Policy'
+    ):
+
         super().__init__(states, statemap, p, gamma, 0)
 
         self.alpha = alpha
@@ -355,6 +358,8 @@ class SARSA_Agent(HW2Agent):
         self.iteration = 0
         self.rewards = []
         self.max_steps = max_steps
+        self.save_policy = save_policy 
+        self.fname = fname + 'policy.npy'
 
         self.reset_Q()
 
@@ -390,7 +395,8 @@ class SARSA_Agent(HW2Agent):
         a = self.Q(s)
         rewards = []
         
-        while self.states[s] != goal and self.iteration < self.max_steps:
+        step = 0
+        while self.states[s] != goal and step < self.max_steps:
             s_prime, r = self.state_transition(a, curstate=s, change_state=False)
             a_prime = self.Q(s_prime)
 
@@ -404,8 +410,8 @@ class SARSA_Agent(HW2Agent):
             a = a_prime
             rewards.append(r)
             
+            step += 1
             self.iteration += 1
-        self.iteration = 0
 
         #if self.states[s] == goal:
         #    print("\tFound goal!")
@@ -418,6 +424,46 @@ class SARSA_Agent(HW2Agent):
         for _ in tqdm(range(num_episodes), total=num_episodes):
             avg_reward.append(self.episode())
 
+        if self.save_policy:
+            np.save(self.fname, self.Q_arr)
+
         self.reset_Q()
-        self.iteration=0
         return avg_reward
+
+''' Basically the same as SARSA, just uses a different
+    algorithm to update the policy
+'''
+class Q_learning_agent(SARSA_Agent):
+    ''' Returns the highest predicted reward from state s
+    '''
+    def maxQ(self, s):
+        return np.max(self.Q_arr[s])
+
+    def episode(self, start_state=None):
+        if start_state == None:
+            start_state = self.start
+
+        goal = self.statemap['goal']
+
+        s = start_state
+        rewards = []
+
+        step = 0
+        while self.states[s] != goal and step < self.max_steps:
+            a = self.Q(s)
+            s_prime, r = self.state_transition(a, curstate=s, change_state=False)
+            r_prime = self.maxQ(s_prime)
+
+            self.Q_arr[s][a] = (
+                self.Q_arr[s][a] 
+                + self.alpha(self.iteration) 
+                * (r + self.gamma*r_prime - self.Q_arr[s][a])
+            )
+
+            s = s_prime
+            rewards.append(r)
+            
+            step += 1
+            self.iteration += 1
+
+        return sum(rewards)/len(rewards)
